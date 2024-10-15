@@ -1,0 +1,15 @@
+---
+
+- name: Configure the ebs volume
+  import_playbook: "./prerequisites/ebs_volume_mount.yml"
+- name: Install docker on the node
+  import_playbook: "./prerequisites/docker_install.yml"
+- name: Setup the ethereum node
+  hosts: aws_ec2
+  become: true
+  roles:
+    - role: ethereum_node
+
+# vars_files:
+#   - ../terraform/mgmt/tf_ansible_vars_file.yml
+#  to add variables to ansible

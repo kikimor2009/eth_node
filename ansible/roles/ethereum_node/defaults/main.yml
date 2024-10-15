@@ -1,0 +1,118 @@
+## Docker network
+docker_network_name: "eth-node"
+
+## JWT Token
+eth_auth_jwt_path: "{{ ebs_mount_path }}/auth_jwt_token"
+
+## Execution client
+### Geth vars
+geth:
+  user: "geth"
+  datadir: "{{ ebs_mount_path }}/geth"
+  auth_jwt_path: "{{ eth_auth_jwt_path }}"
+  cleanup: false # Set "true" to remove the container (cleanup.yml file)
+
+geth_docker_container_name: "geth"
+geth_docker_container_version: "stable-amd64"
+geth_docker_container_image: "ethereum/client-go:{{ geth_docker_container_version }}"
+geth_docker_container_stop_timeout: "300"
+geth_docker_container_command:
+  - --holesky
+  - --datadir=/data
+  - --port={{ geth_ports_p2p }}
+  - --http
+  - --http.addr=0.0.0.0
+  - --http.port={{ geth_ports_http_rpc }}
+  - --authrpc.addr=0.0.0.0
+  - --authrpc.port={{ geth_ports_engine }}
+  - --authrpc.vhosts=*
+  - --authrpc.jwtsecret=/auth.jwt
+  - --metrics
+  - --metrics.port={{ geth_ports_metrics }}
+  - --metrics.addr=0.0.0.0
+  - --discovery.v5
+
+geth_docker_container_ports:
+  - "127.0.0.1:{{ geth_ports_http_rpc }}:{{ geth_ports_http_rpc }}"
+  - "127.0.0.1:{{ geth_ports_engine }}:{{ geth_ports_engine }}"
+  - "{{ geth_ports_p2p }}:{{ geth_ports_p2p }}/tcp"
+  - "{{ geth_ports_p2p }}:{{ geth_ports_p2p }}/udp"
+geth_ports_p2p: 30303
+geth_ports_http_rpc: 8545 # http json rpc
+geth_ports_ws_rpc: 8546 # ws json rpc
+geth_ports_engine: 8551
+geth_ports_metrics: 6060
+
+geth_docker_container_volumes:
+  - "{{ geth.datadir }}:/data"
+  - "{{ geth.auth_jwt_path }}:/auth.jwt:ro"
+
+geth_docker_container_networks:
+  - name: "{{ docker_network_name }}"
+
+## Consensus client
+### Lighthouse vars
+lighthouse:
+  user: "lighthouse"
+  datadir: "{{ ebs_mount_path }}/lighthouse" # depends on ebs mountpoint path
+  auth_jwt_path: "{{ eth_auth_jwt_path }}"
+  cleanup: false # Set "true" to remove the container (cleanup.yml)
+  checkpoint_sync_url: "https://holesky.beaconstate.ethstaker.cc"
+  execution_engine_endpoint: "http://{{ geth_docker_container_name }}:{{ geth_ports_engine }}"
+
+lighthouse_docker_container_name: "lighthouse"
+lighthouse_docker_container_version: "v5.2.1"
+lighthouse_docker_container_image: "sigp/lighthouse:{{ lighthouse_docker_container_version }}"
+lighthouse_docker_container_stop_timeout: "300"
+lighthouse_docker_container_command:
+  - lighthouse
+  - bn
+  - --network=holesky
+  - --checkpoint-sync-url={{ lighthouse.checkpoint_sync_url }}
+  - --datadir=/data
+  - --listen-address=0.0.0.0
+  - --port={{ lighthouse_ports_p2p }}
+  - --discovery-port={{ lighthouse_ports_p2p }}
+  - --http
+  - --http-address=0.0.0.0
+  - --http-port={{ lighthouse_ports_http_beacon }}
+  - --execution-jwt=/auth.jwt
+  - --execution-endpoint= {{ lighthouse.execution_engine_endpoint }}
+  - --metrics
+  - --metrics-address=0.0.0.0
+  - --metrics-allow-origin=*
+  - --metrics-port={{ lighthouse_ports_metrics }}
+
+lighthouse_docker_container_ports:
+  - "127.0.0.1:{{ lighthouse_ports_http_beacon }}:{{ lighthouse_ports_http_beacon }}"
+  - "0.0.0.0:{{ lighthouse_ports_p2p }}:{{ lighthouse_ports_p2p }}/tcp"
+  - "0.0.0.0:{{ lighthouse_ports_p2p }}:{{ lighthouse_ports_p2p }}/udp"
+lighthouse_ports_p2p: 9000
+lighthouse_ports_http_beacon: 5052
+lighthouse_ports_metrics: 5054
+
+lighthouse_docker_container_volumes:
+  - "{{ lighthouse.datadir }}:/data"
+  - "{{ lighthouse.auth_jwt_path }}:/auth.jwt:ro"
+
+lighthouse_docker_container_networks:
+  - name: "{{ docker_network_name }}"
+
+## Metrics exporter
+metrics_exporter_cleanup: false
+metrics_exporter_container_stop_timeout: "30"
+
+metrics_exporter_container_name: "eth-metrics-exporter"
+metrics_exporter_container_image: "samcm/ethereum-metrics-exporter:latest"
+metrics_exporter_container_ports: []
+  # - "0.0.0.0:9090:9090"
+metrics_exporter_container_networks:
+  - name: "{{ docker_network_name }}"
+
+metrics_exporter_el_endpoint: http://{{ geth_docker_container_name }}:{{ geth_ports_http_rpc }}
+metrics_exporter_cl_endpoint: http://{{ lighthouse_docker_container_name }}:{{ lighthouse_ports_http_beacon }}
+
+metrics_exporter_container_command:
+  - --execution-url={{ metrics_exporter_el_endpoint }}
+  - --consensus-url={{ metrics_exporter_cl_endpoint }}
+  - --metrics-port=9090

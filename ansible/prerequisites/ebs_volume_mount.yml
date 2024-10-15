@@ -1,0 +1,28 @@
+- name: Dynamic EBS volume mount
+  hosts: aws_ec2
+  become: true
+  tasks:
+    - name: List block device name
+      ansible.builtin.shell:
+        cmd: "set -o pipefail && lsblk -o PATH,SERIAL | grep {{ ebs_volume_id }} | cut -d' ' -f1"
+      args:
+        executable: /bin/bash
+      register: lsblk
+      changed_when: lsblk.stdout | length > 0
+
+    - name: Store EBS volume device name
+      ansible.builtin.set_fact:
+        ebs_volume_device_name: "{{ lsblk.stdout }}"
+
+    - name: Format EC2 volume
+      community.general.filesystem:
+        fstype: ext4
+        dev: "{{ ebs_volume_device_name }}"
+        force: false
+    - name: Mount EC2 volume
+      ansible.posix.mount:
+        path: "{{ ebs_mount_path }}"
+        src: "{{ ebs_volume_device_name }}"
+        fstype: ext4
+        boot: true
+        state: mounted

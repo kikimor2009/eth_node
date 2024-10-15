@@ -1,0 +1,11 @@
+- name: Run metrics_exporter container
+  community.docker.docker_container:
+    name: "{{ metrics_exporter_container_name }}"
+    image: "{{ metrics_exporter_container_image }}"
+    image_name_mismatch: recreate
+    state: started
+    restart_policy: always
+    stop_timeout: "{{ metrics_exporter_container_stop_timeout }}"
+    ports: "{{ metrics_exporter_container_ports }}"
+    networks: "{{ metrics_exporter_container_networks }}"
+    command: "{{ metrics_exporter_container_command }}"

@@ -1,0 +1,44 @@
+---
+- name: Install docker package
+  hosts: aws_ec2
+  become: true
+  tasks:
+    - name: Add Docker GPG apt Key
+      ansible.builtin.apt_key:
+        url: https://download.docker.com/linux/ubuntu/gpg
+        state: present
+
+    - name: Add Docker Repository
+      ansible.builtin.apt_repository:
+        repo: deb https://download.docker.com/linux/ubuntu focal stable
+        state: present
+
+    - name: Update apt cache
+      ansible.builtin.apt:
+        update_cache: true
+
+    - name: Install required packages
+      ansible.builtin.apt:
+        pkg:
+          - apt-transport-https=2.4.13
+          - ca-certificates=20240203~22.04.1
+          - curl=7.81.0-1ubuntu1.18
+          - software-properties-common=0.99.22.9
+          - python3-pip=22.0.2+dfsg-1
+          - virtualenv=20.13.0+ds-2
+          - python3-setuptools=59.6.0-1.2ubuntu0.22.04.2
+          - docker-ce=5:27.3.1-1~ubuntu.20.04~focal
+          - jq=1.6-2.1ubuntu3
+
+    - name: Install Docker Module for Python
+      ansible.builtin.pip:
+        name:
+          - docker==6.1.3
+          - docker-compose==1.29.2
+          - requests==2.32.0
+
+    - name: Add user to the docker group
+      ansible.builtin.user:
+        name: "{{ ansible_ssh_user }}"
+        groups: docker
+        append: true

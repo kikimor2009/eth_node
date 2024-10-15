@@ -1,0 +1,17 @@
+- name: Remove geth container
+  community.docker.docker_container:
+    name: "{{ geth_docker_container_name }}"
+    state: absent
+  when: geth.cleanup
+
+- name: Remove lighthouse container
+  community.docker.docker_container:
+    name: "{{ lighthouse_docker_container_name }}"
+    state: absent
+  when: lighthouse.cleanup
+
+- name: Remove metrics-exporter container
+  community.docker.docker_container:
+    name: "{{ metrics_exporter_container_name }}"
+    state: absent
+  when: metrics_exporter_cleanup

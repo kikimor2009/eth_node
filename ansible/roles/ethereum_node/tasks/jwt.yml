@@ -1,0 +1,12 @@
+- name: Create dir
+  ansible.builtin.file:
+    path: "{{ eth_auth_jwt_path | dirname }}"
+    state: directory
+    mode: '0755'
+
+- name: Create auth JWT
+  ansible.builtin.shell:
+    cmd: |
+      echo "0x$(openssl rand -hex 32)" > {{ eth_auth_jwt_path }}
+      chmod 644 {{ eth_auth_jwt_path }}
+    creates: "{{ eth_auth_jwt_path }}"

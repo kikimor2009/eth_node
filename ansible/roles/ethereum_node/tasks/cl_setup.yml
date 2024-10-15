@@ -1,0 +1,36 @@
+- name: Add lighthouse user
+  ansible.builtin.user:
+    name: "{{ lighthouse.user }}"
+  register: lh_user_meta
+
+- name: Add lighthouse user to the docker group
+  ansible.builtin.user:
+    name: "{{ lighthouse.user }}"
+    groups: docker
+    append: true
+
+- name: Create data dir
+  ansible.builtin.file:
+    path: "{{ lighthouse.datadir }}"
+    state: directory
+    mode: "0750"
+    owner: "{{ lighthouse.user }}"
+    group: "{{ lighthouse.user }}"
+
+- name: Set permissions
+  ansible.builtin.command: "chown -R {{ lighthouse.user }}:{{ lighthouse.user }} {{ lighthouse.datadir }}"
+  changed_when: false
+
+- name: Run lighthouse container
+  community.docker.docker_container:
+    name: "{{ lighthouse_docker_container_name }}"
+    image: "{{ lighthouse_docker_container_image }}"
+    image_name_mismatch: recreate
+    state: started
+    restart_policy: always
+    stop_timeout: "{{ lighthouse_docker_container_stop_timeout }}"
+    ports: "{{ lighthouse_docker_container_ports }}"
+    volumes: "{{ lighthouse_docker_container_volumes }}"
+    networks: "{{ lighthouse_docker_container_networks }}"
+    command: "{{ lighthouse_docker_container_command }}"
+    user: "{{ lh_user_meta.uid }}"

@@ -1,0 +1,36 @@
+- name: Create geth user
+  ansible.builtin.user:
+    name: "{{ geth.user }}"
+  register: geth_user_meta
+
+- name: Add geth user to docker group
+  ansible.builtin.user:
+    name: "{{ geth.user }}"
+    groups: docker
+    append: true
+
+- name: Create data dir
+  ansible.builtin.file:
+    path: "{{ geth.datadir }}"
+    state: directory
+    mode: "0750"
+    owner: "{{ geth.user }}"
+    group: "{{ geth.user }}"
+
+- name: Set permissions
+  ansible.builtin.command: "chown -R {{ geth.user }}:{{ geth.user }} {{ geth.datadir }}"
+  changed_when: false
+
+- name: Run geth container
+  community.docker.docker_container:
+    name: "{{ geth_docker_container_name }}"
+    image: "{{ geth_docker_container_image }}"
+    image_name_mismatch: recreate
+    state: started
+    restart_policy: always
+    stop_timeout: "{{ geth_docker_container_stop_timeout }}"
+    ports: "{{ geth_docker_container_ports }}"
+    volumes: "{{ geth_docker_container_volumes }}"
+    networks: "{{ geth_docker_container_networks }}"
+    command: "{{ geth_docker_container_command }}"
+    user: "{{ geth_user_meta.uid }}"

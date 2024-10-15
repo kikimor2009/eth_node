@@ -1,0 +1,42 @@
+# work on the naming convention
+
+resource "aws_vpc" "eth" {
+  cidr_block           = "10.20.0.0/16"
+  enable_dns_hostnames = true
+  tags = {
+    Name = "ethereum"
+  }
+}
+
+resource "aws_internet_gateway" "gw" {
+  vpc_id = aws_vpc.eth.id
+
+  tags = {
+    Name = "eth"
+  }
+}
+
+resource "aws_subnet" "main" {
+  vpc_id     = aws_vpc.eth.id
+  cidr_block = "10.20.10.0/24"
+
+  tags = {
+    Name = "Main"
+  }
+}
+
+resource "aws_route_table" "eth_rt" {
+  vpc_id = aws_vpc.eth.id
+  route {
+    cidr_block = "0.0.0.0/0"
+    gateway_id = aws_internet_gateway.gw.id
+  }
+  tags = {
+    Name = "eth-rt"
+  }
+}
+
+resource "aws_main_route_table_association" "set-eth-default-rt" {
+  vpc_id         = aws_vpc.eth.id
+  route_table_id = aws_route_table.eth_rt.id
+}

@@ -1,0 +1,19 @@
+- name: Create docker network
+  community.docker.docker_network:
+    name: "{{ docker_network_name }}"
+
+- name: Create JWT Token
+  ansible.builtin.import_tasks: jwt.yml
+
+- name: Setup geth execution client
+  ansible.builtin.import_tasks: el_setup.yml
+
+- name: Pause
+  ansible.builtin.pause:
+    seconds: 10
+
+- name: Setup lighthouse consensus client
+  ansible.builtin.import_tasks: cl_setup.yml
+
+- name: Setup metrics exporter
+  ansible.builtin.import_tasks: monitoring_setup.yml
